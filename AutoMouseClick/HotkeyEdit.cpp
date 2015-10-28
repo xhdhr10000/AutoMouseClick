@@ -37,12 +37,12 @@ BOOL CHotkeyEdit::PreTranslateMessage(MSG* pMsg)
 			this->SetWindowText(sz);
 			if (this->m_Flag == HOTKEY_CLICK) {
 				UnregisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_CLICK);
-				RegisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_CLICK, MOD_NOREPEAT |
+				RegisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_CLICK,
 					((ctrl)?MOD_CONTROL:0) | ((alt)?MOD_ALT:0) | ((shift)?MOD_SHIFT:0),
 					pMsg->wParam);
 			} else if (this->m_Flag == HOTKEY_EXIT) {
 				UnregisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_EXIT);
-				RegisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_EXIT, MOD_NOREPEAT |
+				RegisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_EXIT,
 					((ctrl)?MOD_CONTROL:0) | ((alt)?MOD_ALT:0) | ((shift)?MOD_SHIFT:0),
 					pMsg->wParam);
 			}

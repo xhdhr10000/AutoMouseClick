@@ -90,12 +90,12 @@ BOOL CAutoMouseClickDlg::OnInitDialog()
 	GetDlgItem(IDC_COUNT)->SetWindowText(szCount);
 	GetDlgItem(IDC_HOTKEY)->SetWindowText(szHotkey);
 	GetDlgItem(IDC_HOTKEYEXIT)->SetWindowText(szHotkeyExit);
-	RegisterHotKey(m_hWnd, HOTKEY_CLICK, MOD_NOREPEAT|
+	RegisterHotKey(m_hWnd, HOTKEY_CLICK,
 		((m_HotKeyEdit.m_HotkeyCtrl)?MOD_CONTROL:0) |
 		((m_HotKeyEdit.m_HotkeyAlt)?MOD_ALT:0) |
 		((m_HotKeyEdit.m_HotkeyShift)?MOD_SHIFT:0),
 		m_HotKeyEdit.m_HotkeyCode);
-	RegisterHotKey(m_hWnd, HOTKEY_EXIT, MOD_NOREPEAT|
+	RegisterHotKey(m_hWnd, HOTKEY_EXIT,
 		((m_HotKeyExit.m_HotkeyCtrl)?MOD_CONTROL:0) |
 		((m_HotKeyExit.m_HotkeyAlt)?MOD_ALT:0) |
 		((m_HotKeyExit.m_HotkeyShift)?MOD_SHIFT:0),
