@@ -69,21 +69,21 @@ BOOL CAutoMouseClickDlg::OnInitDialog()
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_COUNT, _T("50"), szCount, 64, szPath);
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY, _T("K"), szHotkey, 64, szPath);
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CTRL, _T("0"), szValue, 64, szPath);
-		m_HotKeyEdit.m_HotkeyCtrl = _tcscmp(szValue, _T("0"));
+		m_HotKeyEdit.m_HotkeyCtrl = _tcscmp(szValue, _T("0")) != 0;
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_ALT, _T("0"), szValue, 64, szPath);
-		m_HotKeyEdit.m_HotkeyAlt = _tcscmp(szValue, _T("0"));
+		m_HotKeyEdit.m_HotkeyAlt = _tcscmp(szValue, _T("0")) != 0;
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_SHIFT, _T("0"), szValue, 64, szPath);
-		m_HotKeyEdit.m_HotkeyShift = _tcscmp(szValue, _T("0"));
+		m_HotKeyEdit.m_HotkeyShift = _tcscmp(szValue, _T("0")) != 0;
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CODE, _T("75"), szValue, 64, szPath);
 		_stscanf_s(szValue, _T("%u"), &m_HotKeyEdit.m_HotkeyCode);
 
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT, _T("J"), szHotkeyExit, 64, szPath);
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CTRL, _T("0"), szValue, 64, szPath);
-		m_HotKeyExit.m_HotkeyCtrl = _tcscmp(szValue, _T("0"));
+		m_HotKeyExit.m_HotkeyCtrl = _tcscmp(szValue, _T("0")) != 0;
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_ALT, _T("0"), szValue, 64, szPath);
-		m_HotKeyExit.m_HotkeyAlt = _tcscmp(szValue, _T("0"));
+		m_HotKeyExit.m_HotkeyAlt = _tcscmp(szValue, _T("0")) != 0;
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_SHIFT, _T("0"), szValue, 64, szPath);
-		m_HotKeyExit.m_HotkeyShift = _tcscmp(szValue, _T("0"));
+		m_HotKeyExit.m_HotkeyShift = _tcscmp(szValue, _T("0")) != 0;
 		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CODE, _T("74"), szValue, 64, szPath);
 		_stscanf_s(szValue, _T("%u"), &m_HotKeyExit.m_HotkeyCode);
 	}
@@ -168,31 +168,30 @@ UINT _cdecl MouseClickThread(LPVOID pParam)
 void CAutoMouseClickDlg::OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2)
 {
 	POINT mouse;
-	try {
-		switch (nHotKeyId) {
-		case HOTKEY_CLICK:
-			if (mClickThread) {
-				mStopThread = true;
-				mClickThread = NULL;
-				//KillTimer(1);
-			}
-			else if (GetCursorPos(&mouse)) {
-				//SendMessage(WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(mouse.x, mouse.y));
-				//SendMessage(WM_LBUTTONUP, 0, MAKELPARAM(mouse.x, mouse.y));
-				mClickCounter = 0;
-				mClickInterval = 1000 / mClickCount;
-				MouseSetup(&mBufMouse, mouse);
-				LPVOID pParam = this;
-				mStopThread = false;
-				mClickThread = AfxBeginThread(MouseClickThread, pParam);
-				//SetTimer(1, mClickInterval, NULL);
-			}
-			break;
-		case HOTKEY_EXIT:
-			OnCancel();
-			break;
+
+	switch (nHotKeyId) {
+	case HOTKEY_CLICK:
+		if (mClickThread) {
+			mStopThread = true;
+			mClickThread = NULL;
+			//KillTimer(1);
 		}
-	} catch (CException *) {}
+		else if (GetCursorPos(&mouse)) {
+			//SendMessage(WM_LBUTTONDOWN, MK_LBUTTON, MAKELPARAM(mouse.x, mouse.y));
+			//SendMessage(WM_LBUTTONUP, 0, MAKELPARAM(mouse.x, mouse.y));
+			mClickCounter = 0;
+			mClickInterval = 1000 / mClickCount;
+			MouseSetup(&mBufMouse, mouse);
+			LPVOID pParam = this;
+			mStopThread = false;
+			mClickThread = AfxBeginThread(MouseClickThread, pParam);
+			//SetTimer(1, mClickInterval, NULL);
+		}
+		break;
+	case HOTKEY_EXIT:
+		OnCancel();
+		break;
+	}
 
 	CDialogEx::OnHotKey(nHotKeyId, nKey1, nKey2);
 }
@@ -261,44 +260,61 @@ void CAutoMouseClickDlg::OnBnClickedExit()
 	OnCancel();
 }
 
-
 void CAutoMouseClickDlg::OnDestroy()
 {
-	UnregisterHotKey(m_hWnd, HOTKEY_CLICK);
-	UnregisterHotKey(m_hWnd, HOTKEY_EXIT);
-	
-	TCHAR szPath[MAX_PATH], szValue[1024], szHotkey[64], szHotkeyExit[64];
-	if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, szPath))) {
-		PathAppend(szPath, _T("AutoMouseClick"));
-		CreateDirectory(szPath, NULL);
-		PathAppend(szPath, _T("\\history.ini"));
-		WritePrivateProfileSection(HISTORY_SECTION, _T(""), szPath);
-		m_HotKeyEdit.GetWindowText(szHotkey, 64);
-		m_HotKeyExit.GetWindowText(szHotkeyExit, 64);
-		memset(szValue, 0, sizeof(szValue));
-		_stprintf_s(szValue, 1024, _T("%d"), mClickCount);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_COUNT, szValue, szPath);
+	BOOL ret;
+	DWORD error;
 
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY, szHotkey, szPath);
-		_stprintf_s(szValue, 1024, _T("%d"), (m_HotKeyEdit.m_HotkeyCtrl)?1:0);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CTRL, szValue, szPath);
-		_stprintf_s(szValue, 1024, _T("%d"), (m_HotKeyEdit.m_HotkeyAlt)?1:0);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_ALT, szValue, szPath);
-		_stprintf_s(szValue, 1024, _T("%d"), (m_HotKeyEdit.m_HotkeyShift)?1:0);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_SHIFT, szValue, szPath);
-		_stprintf_s(szValue, 1024, _T("%u"), m_HotKeyEdit.m_HotkeyCode);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CODE, szValue, szPath);
+	try {
+		UnregisterHotKey(m_hWnd, HOTKEY_CLICK);
+		UnregisterHotKey(m_hWnd, HOTKEY_EXIT);
 
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT, szHotkeyExit, szPath);
-		_stprintf_s(szValue, 1024, _T("%d"), (m_HotKeyExit.m_HotkeyCtrl)?1:0);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CTRL, szValue, szPath);
-		_stprintf_s(szValue, 1024, _T("%d"), (m_HotKeyExit.m_HotkeyAlt)?1:0);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_ALT, szValue, szPath);
-		_stprintf_s(szValue, 1024, _T("%d"), (m_HotKeyExit.m_HotkeyShift)?1:0);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_SHIFT, szValue, szPath);
-		_stprintf_s(szValue, 1024, _T("%u"), m_HotKeyExit.m_HotkeyCode);
-		WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CODE, szValue, szPath);
+		TCHAR szPath[MAX_PATH*4], szValue[1024], szHotkey[64], szHotkeyExit[64];
+		if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, szPath))) {
+			ret = PathAppend(szPath, _T("AutoMouseClick"));
+			if (!ret) throw _T("PathAppend:275");
+			ret = CreateDirectory(szPath, NULL);
+			if (!ret) {
+				error = GetLastError();
+				if (error == ERROR_PATH_NOT_FOUND) throw _T("ERROR_PATH_NOT_FOUND:277");
+			}
+			ret = PathAppend(szPath, _T("\\history.ini"));
+			if (!ret) throw _T("PathAppend:282");
+			ret = WritePrivateProfileSection(HISTORY_SECTION, _T(""), szPath);
+			if (!ret) throw _T("WritePrivateProfileSection:284");
+			m_HotKeyEdit.GetWindowText(szHotkey, 64);
+			m_HotKeyExit.GetWindowText(szHotkeyExit, 64);
+			memset(szValue, 0, sizeof(szValue));
+			_stprintf_s(szValue, 1023, _T("%d"), mClickCount);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_COUNT, szValue, szPath);
+
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY, szHotkey, szPath);
+			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyEdit.m_HotkeyCtrl)?1:0);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CTRL, szValue, szPath);
+			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyEdit.m_HotkeyAlt)?1:0);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_ALT, szValue, szPath);
+			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyEdit.m_HotkeyShift)?1:0);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_SHIFT, szValue, szPath);
+			_stprintf_s(szValue, 1023, _T("%u"), m_HotKeyEdit.m_HotkeyCode);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CODE, szValue, szPath);
+
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT, szHotkeyExit, szPath);
+			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyExit.m_HotkeyCtrl)?1:0);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CTRL, szValue, szPath);
+			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyExit.m_HotkeyAlt)?1:0);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_ALT, szValue, szPath);
+			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyExit.m_HotkeyShift)?1:0);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_SHIFT, szValue, szPath);
+			_stprintf_s(szValue, 1023, _T("%u"), m_HotKeyExit.m_HotkeyCode);
+			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CODE, szValue, szPath);
+		}
+	} catch (TCHAR *e) {
+		MessageBox(e);
 	}
 
 	CDialogEx::OnDestroy();
+}
+
+void CAutoMouseClickDlg::OnOK()
+{
 }

@@ -48,4 +48,5 @@ public:
 	afx_msg void OnEnChangeCount();
 	afx_msg void OnBnClickedExit();
 	afx_msg void OnDestroy();
+	afx_msg void OnOK();
 };
