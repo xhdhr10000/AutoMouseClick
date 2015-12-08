@@ -30,6 +30,8 @@ void CAutoMouseClickDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_HOTKEYEXIT, m_HotKeyExit);
 	m_HotKeyEdit.SetFlag(HOTKEY_CLICK);
 	m_HotKeyExit.SetFlag(HOTKEY_EXIT);
+	m_HotKeyEdit.SetParent(this);
+	m_HotKeyExit.SetParent(this);
 }
 
 BEGIN_MESSAGE_MAP(CAutoMouseClickDlg, CDialogEx)
@@ -61,45 +63,69 @@ BOOL CAutoMouseClickDlg::OnInitDialog()
 	mClickCounter = 0;
 	mScrX = GetSystemMetrics(SM_CXSCREEN);
 	mScrY = GetSystemMetrics(SM_CYSCREEN);
+	if (mScrX == 0 || mScrY == 0) {
+		MessageBox(_T("获取屏幕坐标失败"));
+		OnCancel();
+	}
 	
 	TCHAR szPath[MAX_PATH], szCount[64], szHotkey[64], szHotkeyExit[64], szValue[64];
 	if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, szPath))) {
-		PathAppend(szPath, _T("AutoMouseClick"));
-		PathAppend(szPath, _T("\\history.ini"));
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_COUNT, _T("50"), szCount, 64, szPath);
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY, _T("K"), szHotkey, 64, szPath);
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CTRL, _T("0"), szValue, 64, szPath);
+		if (!PathAppend(szPath, _T("AutoMouseClick"))) {
+			MessageBox(_T("PathAppend:73 error"));
+			OnCancel();
+		}
+		if (!PathAppend(szPath, _T("\\history.ini"))) {
+			MessageBox(_T("PathAppend:77 error"));
+			OnCancel();
+		}
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_COUNT, _T("50"), szCount, _countof(szCount), szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY, _T("K"), szHotkey, _countof(szHotkey), szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CTRL, _T("0"), szValue, _countof(szValue), szPath);
 		m_HotKeyEdit.m_HotkeyCtrl = _tcscmp(szValue, _T("0")) != 0;
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_ALT, _T("0"), szValue, 64, szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_ALT, _T("0"), szValue, _countof(szValue), szPath);
 		m_HotKeyEdit.m_HotkeyAlt = _tcscmp(szValue, _T("0")) != 0;
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_SHIFT, _T("0"), szValue, 64, szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_SHIFT, _T("0"), szValue, _countof(szValue), szPath);
 		m_HotKeyEdit.m_HotkeyShift = _tcscmp(szValue, _T("0")) != 0;
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CODE, _T("75"), szValue, 64, szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CODE, _T("75"), szValue, _countof(szValue), szPath);
 		_stscanf_s(szValue, _T("%u"), &m_HotKeyEdit.m_HotkeyCode);
 
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT, _T("J"), szHotkeyExit, 64, szPath);
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CTRL, _T("0"), szValue, 64, szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT, _T("J"), szHotkeyExit, _countof(szHotkeyExit), szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CTRL, _T("0"), szValue, _countof(szValue), szPath);
 		m_HotKeyExit.m_HotkeyCtrl = _tcscmp(szValue, _T("0")) != 0;
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_ALT, _T("0"), szValue, 64, szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_ALT, _T("0"), szValue, _countof(szValue), szPath);
 		m_HotKeyExit.m_HotkeyAlt = _tcscmp(szValue, _T("0")) != 0;
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_SHIFT, _T("0"), szValue, 64, szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_SHIFT, _T("0"), szValue, _countof(szValue), szPath);
 		m_HotKeyExit.m_HotkeyShift = _tcscmp(szValue, _T("0")) != 0;
-		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CODE, _T("74"), szValue, 64, szPath);
+		GetPrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CODE, _T("74"), szValue, _countof(szValue), szPath);
 		_stscanf_s(szValue, _T("%u"), &m_HotKeyExit.m_HotkeyCode);
 	}
 	GetDlgItem(IDC_COUNT)->SetWindowText(szCount);
 	GetDlgItem(IDC_HOTKEY)->SetWindowText(szHotkey);
 	GetDlgItem(IDC_HOTKEYEXIT)->SetWindowText(szHotkeyExit);
-	RegisterHotKey(m_hWnd, HOTKEY_CLICK,
+
+	BOOL bRet = TRUE;
+	bRet = RegisterHotKey(m_hWnd, HOTKEY_CLICK,
 		((m_HotKeyEdit.m_HotkeyCtrl)?MOD_CONTROL:0) |
 		((m_HotKeyEdit.m_HotkeyAlt)?MOD_ALT:0) |
 		((m_HotKeyEdit.m_HotkeyShift)?MOD_SHIFT:0),
 		m_HotKeyEdit.m_HotkeyCode);
-	RegisterHotKey(m_hWnd, HOTKEY_EXIT,
+	if (!bRet) {
+		TCHAR sz[256];
+		_stprintf_s(sz, _countof(sz), _T("热键 %s 已被注册\n"), szHotkey);
+		MessageBox(sz);
+		OnCancel();
+	}
+	bRet = RegisterHotKey(m_hWnd, HOTKEY_EXIT,
 		((m_HotKeyExit.m_HotkeyCtrl)?MOD_CONTROL:0) |
 		((m_HotKeyExit.m_HotkeyAlt)?MOD_ALT:0) |
 		((m_HotKeyExit.m_HotkeyShift)?MOD_SHIFT:0),
 		m_HotKeyExit.m_HotkeyCode);
+	if (!bRet) {
+		TCHAR sz[256];
+		_stprintf_s(sz, _countof(sz), _T("热键 %s 已被注册\n"), szHotkeyExit);
+		MessageBox(sz);
+		OnCancel();
+	}
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -191,9 +217,10 @@ void CAutoMouseClickDlg::OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2)
 	case HOTKEY_EXIT:
 		OnCancel();
 		break;
+	default:
+		CDialogEx::OnHotKey(nHotKeyId, nKey1, nKey2);
+		break;
 	}
-
-	CDialogEx::OnHotKey(nHotKeyId, nKey1, nKey2);
 }
 
 
@@ -269,7 +296,7 @@ void CAutoMouseClickDlg::OnDestroy()
 		UnregisterHotKey(m_hWnd, HOTKEY_CLICK);
 		UnregisterHotKey(m_hWnd, HOTKEY_EXIT);
 
-		TCHAR szPath[MAX_PATH*4], szValue[1024], szHotkey[64], szHotkeyExit[64];
+		TCHAR szPath[MAX_PATH], szValue[1024], szHotkey[64], szHotkeyExit[64];
 		if (SUCCEEDED(SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0, szPath))) {
 			ret = PathAppend(szPath, _T("AutoMouseClick"));
 			if (!ret) throw _T("PathAppend:275");
@@ -284,28 +311,27 @@ void CAutoMouseClickDlg::OnDestroy()
 			if (!ret) throw _T("WritePrivateProfileSection:284");
 			m_HotKeyEdit.GetWindowText(szHotkey, 64);
 			m_HotKeyExit.GetWindowText(szHotkeyExit, 64);
-			memset(szValue, 0, sizeof(szValue));
-			_stprintf_s(szValue, 1023, _T("%d"), mClickCount);
+			_stprintf_s(szValue, _countof(szValue), _T("%d"), mClickCount);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_COUNT, szValue, szPath);
 
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY, szHotkey, szPath);
-			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyEdit.m_HotkeyCtrl)?1:0);
+			_stprintf_s(szValue, _countof(szValue), _T("%d"), (m_HotKeyEdit.m_HotkeyCtrl)?1:0);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CTRL, szValue, szPath);
-			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyEdit.m_HotkeyAlt)?1:0);
+			_stprintf_s(szValue, _countof(szValue), _T("%d"), (m_HotKeyEdit.m_HotkeyAlt)?1:0);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_ALT, szValue, szPath);
-			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyEdit.m_HotkeyShift)?1:0);
+			_stprintf_s(szValue, _countof(szValue), _T("%d"), (m_HotKeyEdit.m_HotkeyShift)?1:0);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_SHIFT, szValue, szPath);
-			_stprintf_s(szValue, 1023, _T("%u"), m_HotKeyEdit.m_HotkeyCode);
+			_stprintf_s(szValue, _countof(szValue), _T("%u"), m_HotKeyEdit.m_HotkeyCode);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_CODE, szValue, szPath);
 
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT, szHotkeyExit, szPath);
-			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyExit.m_HotkeyCtrl)?1:0);
+			_stprintf_s(szValue, _countof(szValue), _T("%d"), (m_HotKeyExit.m_HotkeyCtrl)?1:0);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CTRL, szValue, szPath);
-			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyExit.m_HotkeyAlt)?1:0);
+			_stprintf_s(szValue, _countof(szValue), _T("%d"), (m_HotKeyExit.m_HotkeyAlt)?1:0);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_ALT, szValue, szPath);
-			_stprintf_s(szValue, 1023, _T("%d"), (m_HotKeyExit.m_HotkeyShift)?1:0);
+			_stprintf_s(szValue, _countof(szValue), _T("%d"), (m_HotKeyExit.m_HotkeyShift)?1:0);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_SHIFT, szValue, szPath);
-			_stprintf_s(szValue, 1023, _T("%u"), m_HotKeyExit.m_HotkeyCode);
+			_stprintf_s(szValue, _countof(szValue), _T("%u"), m_HotKeyExit.m_HotkeyCode);
 			WritePrivateProfileString(HISTORY_SECTION, HISTORY_HOTKEY_EXIT_CODE, szValue, szPath);
 		}
 	} catch (TCHAR *e) {

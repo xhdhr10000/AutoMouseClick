@@ -1,5 +1,6 @@
 #pragma once
 
+class CAutoMouseClickDlg;
 
 // CHotkeyEdit
 
@@ -12,6 +13,7 @@ public:
 	virtual ~CHotkeyEdit();
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
 	void SetFlag(int flag);
+	void SetParent(CAutoMouseClickDlg *p);
 
 protected:
 	DECLARE_MESSAGE_MAP()
@@ -21,6 +23,5 @@ public:
 	WPARAM m_HotkeyCode;
 private:
 	int m_Flag;
+	CAutoMouseClickDlg *m_Parent;
 };
-
-

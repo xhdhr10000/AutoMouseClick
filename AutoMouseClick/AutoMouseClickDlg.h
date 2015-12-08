@@ -3,6 +3,7 @@
 //
 
 #pragma once
+
 #include "HotkeyEdit.h"
 
 // CAutoMouseClickDlg 对话框
@@ -30,10 +31,10 @@ public:
 	int mClickCount;
 	int mClickInterval;
 	CWinThread *mClickThread;
+	CHotkeyEdit m_HotKeyEdit, m_HotKeyExit;
 
 protected:
 	HICON m_hIcon;
-	CHotkeyEdit m_HotKeyEdit, m_HotKeyExit;
 	int mScrX, mScrY;
 
 	// 生成的消息映射函数
