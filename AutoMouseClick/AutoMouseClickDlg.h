@@ -4,7 +4,11 @@
 
 #pragma once
 
+#include <iostream>
+#include <vector>
 #include "HotkeyEdit.h"
+
+using namespace std;
 
 // CAutoMouseClickDlg 对话框
 class CAutoMouseClickDlg : public CDialogEx
@@ -15,6 +19,9 @@ public:
 	void MouseSetup(INPUT *buffer, POINT p);
 	void MouseMoveAbsolute(INPUT *buffer, int x, int y);
 	void MouseClick(INPUT *buffer);
+	void RefreshList(int index);
+	int SendHotkey(CHotkeyEdit *hk);
+	void initWnds();
 
 // 对话框数据
 	enum { IDD = IDD_AUTOMOUSECLICK_DIALOG };
@@ -32,6 +39,13 @@ public:
 	int mClickInterval;
 	CWinThread *mClickThread;
 	CHotkeyEdit m_HotKeyEdit, m_HotKeyExit;
+#ifdef TWO_HOTKEY
+	CHotkeyEdit m_HotKey1, m_HotKey2;
+#endif
+	CListBox *m_List;
+	vector<CPoint> mPoints;
+	vector<CWnd*> mWnds;
+	CDialog *m_Dialog;
 
 protected:
 	HICON m_hIcon;
@@ -50,4 +64,6 @@ public:
 	afx_msg void OnBnClickedExit();
 	afx_msg void OnDestroy();
 	afx_msg void OnOK();
+	afx_msg void OnBnClickedAdd();
+	afx_msg void OnBnClickedDel();
 };

@@ -28,31 +28,17 @@ BOOL CHotkeyEdit::PreTranslateMessage(MSG* pMsg)
 			ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
 			alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
 			shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-			if (this->m_Flag == HOTKEY_CLICK) {
-				if (m_Parent->m_HotKeyExit.m_HotkeyCtrl == ctrl &&
-					m_Parent->m_HotKeyExit.m_HotkeyAlt == alt &&
-					m_Parent->m_HotKeyExit.m_HotkeyShift == shift &&
-					m_Parent->m_HotKeyExit.m_HotkeyCode == pMsg->wParam) {
-						MessageBox(_T("Already Registered!"));
-						return TRUE;
-				}
-				UnregisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_CLICK);
-				RegisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_CLICK,
-					((ctrl)?MOD_CONTROL:0) | ((alt)?MOD_ALT:0) | ((shift)?MOD_SHIFT:0),
-					pMsg->wParam);
-			} else if (this->m_Flag == HOTKEY_EXIT) {
-				if (m_Parent->m_HotKeyEdit.m_HotkeyCtrl == ctrl &&
-					m_Parent->m_HotKeyEdit.m_HotkeyAlt == alt &&
-					m_Parent->m_HotKeyEdit.m_HotkeyShift == shift &&
-					m_Parent->m_HotKeyEdit.m_HotkeyCode == pMsg->wParam) {
-						MessageBox(_T("Already Registered!"));
-						return TRUE;
-				}
-				UnregisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_EXIT);
-				RegisterHotKey(this->GetParent()->GetSafeHwnd(), HOTKEY_EXIT,
-					((ctrl)?MOD_CONTROL:0) | ((alt)?MOD_ALT:0) | ((shift)?MOD_SHIFT:0),
-					pMsg->wParam);
+			if (m_Parent->m_HotKeyExit.m_HotkeyCtrl == ctrl &&
+				m_Parent->m_HotKeyExit.m_HotkeyAlt == alt &&
+				m_Parent->m_HotKeyExit.m_HotkeyShift == shift &&
+				m_Parent->m_HotKeyExit.m_HotkeyCode == pMsg->wParam) {
+					MessageBox(_T("Already Registered!"));
+					return TRUE;
 			}
+			UnregisterHotKey(this->GetParent()->GetSafeHwnd(), this->m_Flag);
+			RegisterHotKey(this->GetParent()->GetSafeHwnd(), this->m_Flag,
+				((ctrl)?MOD_CONTROL:0) | ((alt)?MOD_ALT:0) | ((shift)?MOD_SHIFT:0),
+				pMsg->wParam);
 			m_HotkeyCtrl = ctrl;
 			m_HotkeyAlt = alt;
 			m_HotkeyShift = shift;
