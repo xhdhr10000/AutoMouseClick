@@ -33,23 +33,24 @@ public:
 // 实现
 public:
 	INPUT mBufMouse;
-	bool mStopThread;
+	bool mStopThread, mStopPaintThread, mPaintUpdate;
 	int mClickCounter;
 	int mClickCount;
 	int mClickInterval;
-	CWinThread *mClickThread;
+	CWinThread *mClickThread, *mPaintThread;
 	CHotkeyEdit m_HotKeyEdit, m_HotKeyExit;
 #ifdef TWO_HOTKEY
 	CHotkeyEdit m_HotKey1, m_HotKey2;
 #endif
 	CListBox *m_List;
 	vector<CPoint> mPoints;
+	BOOL mAddingPoint;
 	vector<CWnd*> mWnds;
 	CDialog *m_Dialog;
+	int mScrX, mScrY;
 
 protected:
 	HICON m_hIcon;
-	int mScrX, mScrY;
 
 	// 生成的消息映射函数
 	virtual BOOL OnInitDialog();

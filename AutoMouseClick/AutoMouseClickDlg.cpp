@@ -24,6 +24,7 @@ BOOL InstallKbHook();
 BOOL UninstallKbHook();
 BOOL InstallMsHook();
 BOOL UninstallMsHook();
+UINT _cdecl PaintThread(LPVOID pParam);
 
 CAutoMouseClickDlg::CAutoMouseClickDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CAutoMouseClickDlg::IDD, pParent)
@@ -84,6 +85,7 @@ BOOL CAutoMouseClickDlg::OnInitDialog()
 	mStopThread = false;
 	mClickThread = NULL;
 	mClickCounter = 0;
+	mAddingPoint = FALSE;
 	mScrX = GetSystemMetrics(SM_CXSCREEN);
 	mScrY = GetSystemMetrics(SM_CYSCREEN);
 	if (mScrX == 0 || mScrY == 0) {
@@ -230,6 +232,11 @@ BOOL CAutoMouseClickDlg::OnInitDialog()
 
 	InstallKbHook();
 
+	LPVOID pParam = this;
+	mStopPaintThread = false;
+	mPaintUpdate = false;
+	mPaintThread = AfxBeginThread(PaintThread, pParam);
+
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -297,6 +304,55 @@ UINT _cdecl MouseClickThread(LPVOID pParam)
 	}
 	pThis->mStopThread = true;
 	pThis->mClickThread = NULL;
+	return 0;
+}
+
+UINT _cdecl PaintThread(LPVOID pParam)
+{
+	CAutoMouseClickDlg *pThis = (class CAutoMouseClickDlg*)pParam;
+	int r = g_Dialog->mScrX/170;
+	//CPen pen(PS_SOLID, 3, RGB(0x21, 0x96, 0xf3));
+	//CPen penSelected(PS_SOLID, 3, RGB(0xff, 0x98, 0x0));
+	CPen pen(PS_SOLID, 7, RGB(0xff, 0x00, 0x00));
+	CPen penSelected(PS_SOLID, 7, RGB(34, 177, 76));
+	//CPen penBlack(PS_SOLID, 5, RGB(0, 0, 0));
+	//CPen penWhite(PS_SOLID, 5, RGB(0xff, 0xff, 0xff));
+
+	while (!pThis->mStopPaintThread) {
+		HDC hdc = ::GetDC(NULL);
+		::SetBkMode(hdc, TRANSPARENT);
+		::SetROP2(hdc, R2_COPYPEN);
+		::SelectObject(hdc, pen.GetSafeHandle());
+		for (unsigned int i=0; i<g_Dialog->mPoints.size() - g_Dialog->mAddingPoint; i++) {
+			if (g_Dialog->mPaintUpdate) break;
+			CPoint pt = g_Dialog->mPoints.at(i);
+
+			/*::SetROP2(hdc, R2_NOP);
+			::SelectObject(hdc, GetStockObject(NULL_PEN));
+			::SelectObject(hdc, GetStockObject(NULL_BRUSH));
+			::Rectangle(hdc, pt.x-r, pt.y-r, pt.x+r, pt.y+r);*/
+
+			//::Ellipse(hdc, pt.x-r, pt.y-r, pt.x+r, pt.y+r);
+			//::SelectObject(hdc, penBlack.GetSafeHandle());
+			//::MoveToEx(hdc, pt.x-r, pt.y, NULL);
+			//::LineTo(hdc, pt.x+r, pt.y);
+			//::MoveToEx(hdc, pt.x, pt.y-r, NULL);
+			//::LineTo(hdc, pt.x, pt.y+r);
+
+			if (i == g_Dialog->m_List->GetCurSel())
+				::SelectObject(hdc, penSelected.GetSafeHandle());
+			else
+				::SelectObject(hdc, pen.GetSafeHandle());
+			::MoveToEx(hdc, pt.x-r, pt.y, NULL);
+			::LineTo(hdc, pt.x+r, pt.y);
+			::MoveToEx(hdc, pt.x, pt.y-r, NULL);
+			::LineTo(hdc, pt.x, pt.y+r);
+		}
+		::ReleaseDC(NULL, hdc);
+		if (!g_Dialog->mPaintUpdate) ::Sleep(10);
+		g_Dialog->mPaintUpdate = false;
+	}
+	pThis->mPaintThread = NULL;
 	return 0;
 }
 
@@ -477,6 +533,9 @@ void CAutoMouseClickDlg::OnDestroy()
 	unsigned int i;
 
 	UninstallKbHook();
+	mStopPaintThread = true;
+	::InvalidateRect(NULL, NULL, TRUE);
+
 	try {
 		UnregisterHotKey(m_hWnd, HOTKEY_CLICK);
 		UnregisterHotKey(m_hWnd, HOTKEY_EXIT);
@@ -669,6 +728,7 @@ LRESULT CALLBACK LowLevelMouseProc(INT nCode, WPARAM wParam, LPARAM lParam)
 					g_Dialog->initWnds();
 				else
 					g_Dialog->mWnds.push_back(g_Dialog->WindowFromPoint(pkbhs->pt));
+				g_Dialog->mAddingPoint = FALSE;
 				UninstallMsHook();
 				return 1;
 			}
@@ -737,8 +797,6 @@ BOOL UninstallMsHook()
 
 void CAutoMouseClickDlg::OnBnClickedAdd()
 {
-	//HDC hdc = ::GetDC(NULL);
-
 	//Gdiplus::GdiplusStartupInput input;
 	//input.GdiplusVersion = 1;
 	//input.DebugEventCallback = NULL;
@@ -751,8 +809,7 @@ void CAutoMouseClickDlg::OnBnClickedAdd()
 	//Gdiplus::SolidBrush solidBrush( color );
 	//g.FillRectangle( &solidBrush, rectangle );
 	
-	//::Rectangle(hdc, 0, 0, 400, 400);
-
+	mAddingPoint = TRUE;
 	mPoints.push_back(CPoint(0, 0));
 	InstallMsHook();
 }
@@ -763,8 +820,17 @@ void CAutoMouseClickDlg::OnBnClickedDel()
 	//Gdiplus::GdiplusShutdown(token);
 	//UninstallKbHook();
 	if (m_List->GetCurSel() == -1) return;
+	CPoint pt = mPoints.at(m_List->GetCurSel());
 	mPoints.erase(mPoints.begin() + m_List->GetCurSel());
 	if (mWnds.size() > m_List->GetCurSel())
 		mWnds.erase(mWnds.begin() + m_List->GetCurSel());
 	m_List->DeleteString(m_List->GetCurSel());
+	
+	RECT rect;
+	rect.left = pt.x - 100;
+	rect.top = pt.y - 100;
+	rect.right = pt.x + 100;
+	rect.bottom = pt.y + 100;
+	mPaintUpdate = true;
+	::InvalidateRect(NULL, &rect, TRUE);
 }
