@@ -67,6 +67,9 @@ BEGIN_MESSAGE_MAP(CAutoMouseClickDlg, CDialogEx)
 	ON_WM_DESTROY()
 	ON_BN_CLICKED(BT_ADD, &CAutoMouseClickDlg::OnBnClickedAdd)
 	ON_BN_CLICKED(BT_DEL, &CAutoMouseClickDlg::OnBnClickedDel)
+//	ON_LBN_SELCANCEL(IDC_LIST, &CAutoMouseClickDlg::OnLbnSelcancelList)
+ON_LBN_SELCHANGE(IDC_LIST, &CAutoMouseClickDlg::OnLbnSelchangeList)
+//ON_LBN_KILLFOCUS(IDC_LIST, &CAutoMouseClickDlg::OnLbnKillfocusList)
 END_MESSAGE_MAP()
 
 
@@ -820,11 +823,18 @@ void CAutoMouseClickDlg::OnBnClickedDel()
 	//Gdiplus::GdiplusShutdown(token);
 	//UninstallKbHook();
 	if (m_List->GetCurSel() == -1) return;
-	CPoint pt = mPoints.at(m_List->GetCurSel());
-	mPoints.erase(mPoints.begin() + m_List->GetCurSel());
-	if (mWnds.size() > m_List->GetCurSel())
-		mWnds.erase(mWnds.begin() + m_List->GetCurSel());
-	m_List->DeleteString(m_List->GetCurSel());
+	int cur = m_List->GetCurSel();
+	CPoint pt = mPoints.at(cur);
+	mPoints.erase(mPoints.begin() + cur);
+	if (mWnds.size() > cur)
+		mWnds.erase(mWnds.begin() + cur);
+	m_List->DeleteString(cur);
+
+	TCHAR *item = new TCHAR[256];
+	if (m_List->GetCount() <= cur) cur = 0;
+	m_List->GetText(cur, item);
+	m_List->SelectString(cur, item);
+	delete [] item;
 	
 	RECT rect;
 	rect.left = pt.x - 100;
@@ -833,4 +843,15 @@ void CAutoMouseClickDlg::OnBnClickedDel()
 	rect.bottom = pt.y + 100;
 	mPaintUpdate = true;
 	::InvalidateRect(NULL, &rect, TRUE);
+}
+
+
+void CAutoMouseClickDlg::OnLbnSelchangeList()
+{
+	static int last = -1;
+	if (m_List->GetCurSel() == last) {
+		m_List->SetCurSel(-1);
+		last = -1;
+	} else
+		last = m_List->GetCurSel();
 }

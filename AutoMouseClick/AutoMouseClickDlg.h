@@ -67,4 +67,7 @@ public:
 	afx_msg void OnOK();
 	afx_msg void OnBnClickedAdd();
 	afx_msg void OnBnClickedDel();
+//	afx_msg void OnLbnSelcancelList();
+	afx_msg void OnLbnSelchangeList();
+//	afx_msg void OnLbnKillfocusList();
 };
